@@ -1,70 +1,67 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './views/App.tsx'
-
-console.log('Расшерение подключенно')
-
 // content-script.js
 let timer: any = null;
-// --- Шаг А: Объявляем функцию (назвали "doClick") ---
+let isRunning = false;
+let abortFlag = false;
+
 function doClick() {
-    function innerCollect() {
-        chrome.storage.local.get("abort", (result) => {
-            if (result.abort) return;
-
-            const elements = [];
-            for (let i = 1; i <= 215; i++) {
-                const selector = `#game-board > div.absolute.w-full.h-full.z-10 > div > div.absolute.left-1\\/2.top-1\\/2.-translate-x-1\\/2.-translate-y-1\\/2 > div > div:nth-child(${i}) > div > div > div`;
-                elements.push(document.querySelector(selector));
-            }
-
-            elements.forEach((element) => {
-                if (element) {
-                    for (let i = 0; i < 3; i++) {
-                        element.click();
-                    }
-                }
-            });
-
-            if (!result.abort) {
-                timer = setTimeout(innerCollect, 5000);
-            }
-        });
+  if (isRunning) {
+    console.log('Цикл уже запущен');
+    return;
+  }
+  
+  isRunning = true;
+  abortFlag = false;
+  
+  function harvestLoop() {
+    if (abortFlag) {
+      console.log('Цикл остановлен');
+      isRunning = false;
+      return;
     }
-
-    innerCollect()
+    
+    const elements = document.querySelectorAll('img[src*="stump"]');
+    console.log('Найдено элементов:', elements.length);
+    
+    if (elements.length > 0) {
+      console.log("Ждем кд");
+      timer = setTimeout(harvestLoop, 5000);
+    } else {
+      // Собираем деревья
+      const trees = document.querySelectorAll<HTMLImageElement>('img[src*="tree"]');
+      if (trees.length === 0) {
+        console.log('Деревья не найдены на странице');
+      } else {
+        console.log(`Найдено деревьев: ${trees.length}`);
+        trees.forEach(tree => tree.click());
+        console.log("Все деревья собраны");
+      }
+      
+      if (!abortFlag) {
+        timer = setTimeout(harvestLoop, 5000);
+      } else {
+        isRunning = false;
+      }
+    }
+  }
+  
+  harvestLoop();
 }
 
-
-// --- Шаг Б: Ждем команду "голоса" ---
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-    if (request.command === 'клик') {   // если голос сказал "клик"
-        doClick();                      // вызываем нашу функцию
-        sendResponse({ status: 'клик выполнен' });
-    }
-
-    return true
-});
-
-function stopSle() {
-    clearTimeout(timer);
-    timer = null;
+function stopButt() {
+  console.log('Остановка цикла');
+  abortFlag = true;
+  clearTimeout(timer);
+  timer = null;
+  isRunning = false;
 }
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-    if (request.command === 'stop') {   // если голос сказал "клик"
-        stopSle()        // вызываем нашу функцию
-        sendResponse({ status: 'клик выполнен' });
-    }
-
-    return true
+  if (request.command === 'start') {
+    doClick();
+    sendResponse({ status: 'цикл запущен' });
+  } else if (request.command === 'stop') {
+    stopButt();
+    sendResponse({ status: 'цикл остановлен' });
+  }
+  return true;
 });
-
-const container = document.createElement('div')
-container.id = 'crxjs-app'
-document.body.appendChild(container)
-createRoot(container).render(
-    <StrictMode>
-        <App />
-    </StrictMode>,
-)
