@@ -12,22 +12,8 @@ function doClick() {
   isRunning = true;
   abortFlag = false;
   
-  function harvestLoop() {
-    if (abortFlag) {
-      console.log('Цикл остановлен');
-      isRunning = false;
-      return;
-    }
-    
-    const elements = document.querySelectorAll('img[src*="stump"]');
-    console.log('Найдено элементов:', elements.length);
-    
-    if (elements.length > 0) {
-      console.log("Ждем кд");
-      timer = setTimeout(harvestLoop, 5000);
-    } else {
-      // Собираем деревья
-      const trees = document.querySelectorAll<HTMLImageElement>('img[src*="tree"]');
+function harvestFree(){
+        const trees = document.querySelectorAll<HTMLImageElement>('img[src*="resources/tree"]');
       if (trees.length === 0) {
         console.log('Деревья не найдены на странице');
       } else {
@@ -35,14 +21,39 @@ function doClick() {
         trees.forEach(tree => tree.click());
         console.log("Все деревья собраны");
       }
-      
-      if (!abortFlag) {
-        timer = setTimeout(harvestLoop, 5000);
-      } else {
+}
+
+function harvestLoop() {
+    if (abortFlag) {
+        console.log('Цикл остановлен');
         isRunning = false;
-      }
+        return;
     }
-  }
+    
+    const elements = document.querySelectorAll('img[src*="stump"]');
+    console.log('Найдено пней:', elements.length);
+    
+    if (elements.length > 0) {
+        const trees = document.querySelectorAll('img[src*="tree"]');
+        if (trees.length > 0) {
+            console.log("Cобираем деревья")
+            harvestFree();
+        } else {
+            console.log("Ждем кд");
+            timer = setTimeout(harvestLoop, 5000);
+            return; // Важно: выйти, чтобы не устанавливать второй таймер
+        }
+    } else {
+        harvestFree();
+    }
+    
+    // Продолжаем цикл, если не было return
+    if (!abortFlag) {
+        timer = setTimeout(harvestLoop, 5000);
+    } else {
+        isRunning = false;
+    }
+}
   
   harvestLoop();
 }
