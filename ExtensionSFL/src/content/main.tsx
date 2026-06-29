@@ -1,4 +1,5 @@
 // content-script.js
+import StoneHarvest, { stopStoneHarvest } from "./stoneHarvest";
 let timer: any = null;
 let isRunning = false;
 let abortFlag = false;
@@ -12,48 +13,47 @@ function doClick() {
   isRunning = true;
   abortFlag = false;
   
-function harvestFree(){
-        const trees = document.querySelectorAll<HTMLImageElement>('img[src*="resources/tree"]');
-      if (trees.length === 0) {
-        console.log('Деревья не найдены на странице');
-      } else {
-        console.log(`Найдено деревьев: ${trees.length}`);
-        trees.forEach(tree => tree.click());
-        console.log("Все деревья собраны");
-      }
-}
+  function harvestFree(){
+    const trees = document.querySelectorAll<HTMLImageElement>('img[src*="resources/tree"]');
+    if (trees.length === 0) {
+      console.log('Деревья не найдены на странице');
+    } else {
+      console.log(`Найдено деревьев: ${trees.length}`);
+      trees.forEach(tree => tree.click());
+      console.log("Все деревья собраны");
+    }
+  }
 
-function harvestLoop() {
+  function harvestLoop() {
     if (abortFlag) {
-        console.log('Цикл остановлен');
-        isRunning = false;
-        return;
+      console.log('Цикл остановлен');
+      isRunning = false;
+      return;
     }
     
     const elements = document.querySelectorAll('img[src*="stump"]');
     console.log('Найдено пней:', elements.length);
     
     if (elements.length > 0) {
-        const trees = document.querySelectorAll('img[src*="tree"]');
-        if (trees.length > 0) {
-            console.log("Cобираем деревья")
-            harvestFree();
-        } else {
-            console.log("Ждем кд");
-            timer = setTimeout(harvestLoop, 5000);
-            return; // Важно: выйти, чтобы не устанавливать второй таймер
-        }
-    } else {
+      const trees = document.querySelectorAll('img[src*="tree"]');
+      if (trees.length > 0) {
+        console.log("Cобираем деревья")
         harvestFree();
+      } else {
+        console.log("Ждем кд");
+        timer = setTimeout(harvestLoop, 5000);
+        return;
+      }
+    } else {
+      harvestFree();
     }
     
-    // Продолжаем цикл, если не было return
     if (!abortFlag) {
-        timer = setTimeout(harvestLoop, 5000);
+      timer = setTimeout(harvestLoop, 5000);
     } else {
-        isRunning = false;
+      isRunning = false;
     }
-}
+  }
   
   harvestLoop();
 }
@@ -64,6 +64,9 @@ function stopButt() {
   clearTimeout(timer);
   timer = null;
   isRunning = false;
+  
+  // Останавливаем StoneHarvest
+  stopStoneHarvest();
 }
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -73,6 +76,9 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   } else if (request.command === 'stop') {
     stopButt();
     sendResponse({ status: 'цикл остановлен' });
+  } else if (request.command === 'step') {
+    StoneHarvest();
+    sendResponse({ status: 'Шаг' });
   }
   return true;
 });

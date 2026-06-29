@@ -20,6 +20,16 @@ const [isActive, setIsActive] = useState(false);
         chrome.tabs.sendMessage(tabId, { command: 'stop' });
       }
     });
+  };
+
+
+      function sloyMoy() {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tabId = tabs[0]?.id;
+      if (tabId) {
+        chrome.tabs.sendMessage(tabId, { command: 'step' });
+      }
+    });
   }
 
   return (
@@ -32,6 +42,10 @@ const [isActive, setIsActive] = useState(false);
       offUserClickedButton();
       setIsActive(prev => !prev);
     }}>Stop me</button>
+          <button onClick={() => {
+      sloyMoy();
+      setIsActive(prev => !prev);
+    }}>Step</button>
     </>
   );
 }
